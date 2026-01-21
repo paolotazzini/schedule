@@ -20,11 +20,9 @@ jobs:
       - name: Installazione librerie
         run: pip install requests beautifulsoup4
 
-      - name: Verifica posizione file
-        run: ls -R
-
-      - name: Esecuzione script
-        run: python rilevazione_dati.py
+      - name: Esecuzione script (Percorso Forzato)
+        # Usiamo ./ per dire "proprio qui nella cartella principale"
+        run: python ./rilevazione_dati.py
 
       - name: Salvataggio risultati
         run: |
