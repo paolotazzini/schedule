@@ -20,17 +20,18 @@ jobs:
       - name: Installazione librerie
         run: pip install requests beautifulsoup4
 
-      - name: Esecuzione Script (Cerca e Avvia)
+      - name: Esecuzione Script
         run: |
-          # Questo comando trova il file .py ovunque sia e lo esegue
-          PYTHON_FILE=$(find . -name "rilevazione_dati.py" -print -quit)
-          python "$PYTHON_FILE"
+          # Cerchiamo solo i FILE (-type f) che finiscono esattamente con .py
+          SCRIPT_PATH=$(find . -type f -name "rilevazione_dati.py" | head -n 1)
+          echo "Sto eseguendo il file trovato in: $SCRIPT_PATH"
+          python "$SCRIPT_PATH"
 
       - name: Salvataggio risultati
         run: |
           git config --global user.name "GitHub Action Bot"
           git config --global user.email "actions@github.com"
-          # Cerca qualsiasi file CSV creato e lo aggiunge
+          # Cerca i file CSV e li aggiunge individualmente
           find . -name "*.csv" -exec git add {} +
           git commit -m "Aggiornamento prezzi: $(date)" || exit 0
           git push
