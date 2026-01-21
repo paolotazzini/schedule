@@ -9,25 +9,30 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout del codice
         uses: actions/checkout@v4
 
-      - name: Python Setup
+      - name: Configurazione Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.10'
 
-      - name: Install
+      - name: Installazione librerie
         run: pip install requests beautifulsoup4
 
-      - name: Controlla dove sono i file
+      - name: Verifica posizione file
         run: ls -R
 
-      - name: Esegui lo script
+      - name: Esecuzione script
         run: python rilevazione_dati.py
 
-      - name: Push dei risultati
+      - name: Salvataggio risultati
         run: |
+          git config --global user.name "GitHub Action Bot"
+          git config --global user.email "actions@github.com"
+          git add storico_prezzi.csv
+          git commit -m "Aggiornamento prezzi: $(date)" || exit 0
+          git push
           git config --global user.name "GitHub Action Bot"
           git config --global user.email "actions@github.com"
           git add storico_prezzi.csv
