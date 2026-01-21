@@ -20,19 +20,15 @@ jobs:
       - name: Installazione librerie
         run: pip install requests beautifulsoup4
 
-      - name: Esecuzione script (Percorso Forzato)
-        # Usiamo ./ per dire "proprio qui nella cartella principale"
-        run: python ./rilevazione_dati.py
+      - name: Esecuzione script nella cartella schedule
+        # Qui diciamo a GitHub di cercare il file dentro la tua cartella
+        run: python schedule/rilevazione_dati.py
 
       - name: Salvataggio risultati
         run: |
           git config --global user.name "GitHub Action Bot"
           git config --global user.email "actions@github.com"
-          git add storico_prezzi.csv
+          # Aggiungiamo il file CSV ovunque esso venga creato
+          git add *.csv || git add schedule/*.csv
           git commit -m "Aggiornamento prezzi: $(date)" || exit 0
-          git push
-          git config --global user.name "GitHub Action Bot"
-          git config --global user.email "actions@github.com"
-          git add storico_prezzi.csv
-          git commit -m "Update prezzi $(date)" || exit 0
           git push
