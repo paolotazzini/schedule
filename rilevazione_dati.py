@@ -21,7 +21,7 @@ def estrai_prezzo(url, unita_misura):
 
 # Configurazione
 url_psv = "https://luce-gas.it/guida/mercato/andamento-prezzo/gas-metano"
-url_pun = "https://luce-gas.it/guida/mercato/andamento-prezzo/energia-elettrica"
+url_pun = "https://tariffe.segugio.it/indice-pun-luce/"
 
 # Rilevazione
 valore_psv = estrai_prezzo(url_psv, "€/Smc")
@@ -41,5 +41,6 @@ if not os.path.exists(percorso_csv):
 
 with open(percorso_csv, "a", encoding="utf-8") as f:
     f.write(f"{data_oggi},{valore_pun},{valore_psv}\n")
+
 
 print(f"Rilevato - PUN: {valore_pun}, PSV: {valore_psv}. Salvato in {percorso_csv}")
