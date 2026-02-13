@@ -5,17 +5,25 @@ import re
 import os
 
 def estrai_prezzo(url, unita_misura):
-    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"}
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
+    }
+
     try:
         response = requests.get(url, headers=headers, timeout=15)
         soup = BeautifulSoup(response.text, 'html.parser')
-        elemento = soup.find(string=re.compile(unita_misura))
-        if elemento:
-            match = re.search(r'\d+,\d+', elemento)
-            if match:
-                # Trasformiamo la virgola in punto (es: 0,149 -> 0.149) per standard CSV
-                return match.group(0).replace(',', '.')
+
+        # Cerca nei paragrafi
+        for p in soup.find_all("p"):
+            testo = p.get_text(separator=" ", strip=True)
+
+            if unita_misura in testo:
+                match = re.search(r'(\d+[.,]\d+)', testo)
+                if match:
+                    return match.group(1).replace(",", ".")
+
         return "N/D"
+
     except Exception as e:
         return "Errore"
 
@@ -44,3 +52,4 @@ with open(percorso_csv, "a", encoding="utf-8") as f:
 
 
 print(f"Rilevato - PUN: {valore_pun}, PSV: {valore_psv}. Salvato in {percorso_csv}")
+
