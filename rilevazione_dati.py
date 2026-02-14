@@ -29,7 +29,7 @@ def estrai_prezzo(url, unita_misura):
 
 # Configurazione
 url_psv = "https://luce-gas.it/guida/mercato/andamento-prezzo/gas-metano"
-url_pun = "https://tariffe.segugio.it/indice-pun-luce/"
+url_pun = "https://www.papernest.it/luce-gas/mercato-energetico/pun/"
 
 # Rilevazione
 valore_psv = estrai_prezzo(url_psv, "€/Smc")
@@ -52,4 +52,5 @@ with open(percorso_csv, "a", encoding="utf-8") as f:
 
 
 print(f"Rilevato - PUN: {valore_pun}, PSV: {valore_psv}. Salvato in {percorso_csv}")
+
 
