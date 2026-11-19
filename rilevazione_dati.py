@@ -4,7 +4,6 @@ from datetime import datetime
 import re
 import os
 
-# Header puliti (senza Accept-Encoding, così Python decomprime sempre correttamente)
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
@@ -13,21 +12,20 @@ HEADERS = {
 
 def estrai_pun_segugio(url):
     try:
-        # Prova prima con cloudscraper (se installato) per bypassare blocchi anti-bot
-        try:
-            import cloudscraper
-            scraper = cloudscraper.create_scraper(browser={'browser': 'chrome', 'platform': 'windows', 'desktop': True})
-            response = scraper.get(url, timeout=20)
-        except ImportError:
-            response = requests.get(url, headers=HEADERS, timeout=20)
+        from playwright.sync_api import sync_playwright
+        with sync_playwright() as p:
+            browser = p.chromium.launch(headless=True)
+            context = browser.new_context(
+                user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
+                locale="it-IT"
+            )
+            page = context.new_page()
+            page.goto(url, wait_until="domcontentloaded", timeout=30000)
+            page.wait_for_timeout(3000) # Attende eventuale caricamento dinamico
+            testo_pagina = page.inner_text("body")
+            browser.close()
 
-        print(f"[DEBUG PUN] Status code HTTP: {response.status_code}")
-        response.raise_for_status()
-
-        soup = BeautifulSoup(response.text, "html.parser")
-        testo_pagina = soup.get_text(" ", strip=True)
-
-        # 1. Cerca la frase esatta: "Il valore del PUN oggi 19 novembre 2026 è 0,20866 €/kWh"
+        # Cerca: "Il valore del PUN oggi 19 novembre 2026 è 0,20866 €/kWh"
         match = re.search(
             r'Il valore del PUN oggi[^€]*?\bè\s*(\d+[.,]\d+)\s*€/kWh',
             testo_pagina,
@@ -36,7 +34,6 @@ def estrai_pun_segugio(url):
         if match:
             return match.group(1).replace(",", ".")
 
-        # 2. Fallback flessibile
         match_fallback = re.search(
             r'PUN oggi[^€]*?\bè\s*(\d+[.,]\d+)\s*€/kWh',
             testo_pagina,
@@ -45,7 +42,7 @@ def estrai_pun_segugio(url):
         if match_fallback:
             return match_fallback.group(1).replace(",", ".")
 
-        print("[DEBUG PUN] Frase non trovata. Primi 200 caratteri:", testo_pagina[:200])
+        print("[DEBUG PUN] Frase non trovata nel testo pagina.")
         return "N/D"
     except Exception as e:
         print(f"[ERRORE PUN DETTAGLIO]: {e}")
