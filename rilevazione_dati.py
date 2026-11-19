@@ -10,39 +10,30 @@ HEADERS = {
     "Accept-Language": "it-IT,it;q=0.9"
 }
 
-def estrai_pun_segugio(url):
+def estrai_pun_energyindex(url):
     try:
-        from playwright.sync_api import sync_playwright
-        with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True)
-            context = browser.new_context(
-                user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
-                locale="it-IT"
-            )
-            page = context.new_page()
-            page.goto(url, wait_until="domcontentloaded", timeout=30000)
-            page.wait_for_timeout(3000) # Attende eventuale caricamento dinamico
-            testo_pagina = page.inner_text("body")
-            browser.close()
+        response = requests.get(url, headers=HEADERS, timeout=20)
+        response.raise_for_status()
+        soup = BeautifulSoup(response.text, "html.parser")
+        testo_pagina = soup.get_text(" ", strip=True)
 
-        # Cerca: "Il valore del PUN oggi 19 novembre 2026 è 0,20866 €/kWh"
+        # Cerca un valore in €/MWh vicino alla parola PUN
         match = re.search(
-            r'Il valore del PUN oggi[^€]*?\bè\s*(\d+[.,]\d+)\s*€/kWh',
+            r'PUN[^€]{0,80}?(\d+(?:[.,]\d+)?)\s*€/MWh',
             testo_pagina,
             re.IGNORECASE
         )
+        if not match:
+            # Fallback: primo valore seguito da €/MWh nella pagina
+            match = re.search(r'(\d+(?:[.,]\d+)?)\s*€/MWh', testo_pagina, re.IGNORECASE)
+
         if match:
-            return match.group(1).replace(",", ".")
+            valore_mwh = float(match.group(1).replace(",", "."))
+            # Converte da €/MWh a €/kWh dividendo per 1000 (arrotondato a 5 decimali)
+            valore_kwh = round(valore_mwh / 1000, 5)
+            return f"{valore_kwh:.5f}"
 
-        match_fallback = re.search(
-            r'PUN oggi[^€]*?\bè\s*(\d+[.,]\d+)\s*€/kWh',
-            testo_pagina,
-            re.IGNORECASE
-        )
-        if match_fallback:
-            return match_fallback.group(1).replace(",", ".")
-
-        print("[DEBUG PUN] Frase non trovata nel testo pagina.")
+        print("[DEBUG PUN] Nessun valore €/MWh trovato nella pagina.")
         return "N/D"
     except Exception as e:
         print(f"[ERRORE PUN DETTAGLIO]: {e}")
@@ -73,10 +64,10 @@ def estrai_psv_lucegas(url):
         return "Errore"
 
 # Configurazione URL
-url_pun = "https://tariffe.segugio.it/indice-pun-luce/"
+url_pun = "https://energyindex.it/it"
 url_psv = "https://luce-gas.it/guida/mercato/andamento-prezzo/gas-metano"
 
-valore_pun = estrai_pun_segugio(url_pun)
+valore_pun = estrai_pun_energyindex(url_pun)
 valore_psv = estrai_psv_lucegas(url_psv)
 data_oggi = datetime.now().strftime("%d/%m/%Y")
 
