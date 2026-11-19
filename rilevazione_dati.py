@@ -5,21 +5,29 @@ import re
 import os
 
 HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-    "Cache-Control": "no-cache",
-    "Pragma": "no-cache"
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+    "Accept-Language": "it-IT,it;q=0.9,en-US;q=0.8,en;q=0.7",
+    "Accept-Encoding": "gzip, deflate, br",
+    "Referer": "https://www.google.it/",
+    "Connection": "keep-alive",
+    "Upgrade-Insecure-Requests": "1",
+    "Sec-Fetch-Dest": "document",
+    "Sec-Fetch-Mode": "navigate",
+    "Sec-Fetch-Site": "cross-site"
 }
 
 def estrai_pun_segugio(url):
+    session = requests.Session()
     try:
-        response = requests.get(url, headers=HEADERS, timeout=15)
+        response = session.get(url, headers=HEADERS, timeout=20)
+        print(f"[DEBUG PUN] Status code HTTP: {response.status_code}")
         response.raise_for_status()
-        soup = BeautifulSoup(response.text, "html.parser")
-
-        # Cerca l'intera pagina testuale per la frase esatta:
-        # "Il valore del PUN oggi ... è 0,20866 €/kWh"
-        testo_pagina = soup.get_text(" ", strip=True)
         
+        soup = BeautifulSoup(response.text, "html.parser")
+        testo_pagina = soup.get_text(" ", strip=True)
+
+        # 1. Cerca la frase esatta: "Il valore del PUN oggi 19 novembre 2026 è 0,20866 €/kWh"
         match = re.search(
             r'Il valore del PUN oggi[^€]*?\bè\s*(\d+[.,]\d+)\s*€/kWh',
             testo_pagina,
@@ -28,7 +36,7 @@ def estrai_pun_segugio(url):
         if match:
             return match.group(1).replace(",", ".")
 
-        # Fallback nel caso tolgano la data o cambino leggermente l'inizio
+        # 2. Fallback flessibile
         match_fallback = re.search(
             r'PUN oggi[^€]*?\bè\s*(\d+[.,]\d+)\s*€/kWh',
             testo_pagina,
@@ -37,14 +45,15 @@ def estrai_pun_segugio(url):
         if match_fallback:
             return match_fallback.group(1).replace(",", ".")
 
+        print("[DEBUG PUN] Pagina scaricata ma frase non trovata. Primi 300 caratteri:", testo_pagina[:300])
         return "N/D"
     except Exception as e:
-        print(f"Errore PUN: {e}")
+        print(f"[ERRORE PUN DETTAGLIO]: {e}")
         return "Errore"
 
 def estrai_psv_lucegas(url):
     try:
-        response = requests.get(url, headers=HEADERS, timeout=15)
+        response = requests.get(url, headers=HEADERS, timeout=20)
         response.raise_for_status()
         soup = BeautifulSoup(response.text, "html.parser")
 
@@ -63,7 +72,7 @@ def estrai_psv_lucegas(url):
 
         return "N/D"
     except Exception as e:
-        print(f"Errore PSV: {e}")
+        print(f"[ERRORE PSV DETTAGLIO]: {e}")
         return "Errore"
 
 # Configurazione URL
@@ -74,7 +83,7 @@ valore_pun = estrai_pun_segugio(url_pun)
 valore_psv = estrai_psv_lucegas(url_psv)
 data_oggi = datetime.now().strftime("%d/%m/%Y")
 
-# Salvataggio (aggiorna la riga di oggi se già presente, senza duplicarla)
+# Salvataggio (aggiorna la riga di oggi se già presente)
 cartella_script = os.path.dirname(os.path.abspath(__file__))
 percorso_csv = os.path.join(cartella_script, "storico_prezzi.csv")
 intestazione = "Data,PUN,PSV\n"
@@ -92,4 +101,3 @@ with open(percorso_csv, "w", encoding="utf-8") as f:
     f.writelines(righe_esistenti)
 
 print(f"Rilevato - PUN: {valore_pun}, PSV: {valore_psv}. Salvato in {percorso_csv}")
-
