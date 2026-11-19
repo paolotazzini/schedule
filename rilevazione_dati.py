@@ -4,26 +4,26 @@ from datetime import datetime
 import re
 import os
 
+# Header puliti (senza Accept-Encoding, così Python decomprime sempre correttamente)
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
-    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
-    "Accept-Language": "it-IT,it;q=0.9,en-US;q=0.8,en;q=0.7",
-    "Accept-Encoding": "gzip, deflate, br",
-    "Referer": "https://www.google.it/",
-    "Connection": "keep-alive",
-    "Upgrade-Insecure-Requests": "1",
-    "Sec-Fetch-Dest": "document",
-    "Sec-Fetch-Mode": "navigate",
-    "Sec-Fetch-Site": "cross-site"
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Accept-Language": "it-IT,it;q=0.9"
 }
 
 def estrai_pun_segugio(url):
-    session = requests.Session()
     try:
-        response = session.get(url, headers=HEADERS, timeout=20)
+        # Prova prima con cloudscraper (se installato) per bypassare blocchi anti-bot
+        try:
+            import cloudscraper
+            scraper = cloudscraper.create_scraper(browser={'browser': 'chrome', 'platform': 'windows', 'desktop': True})
+            response = scraper.get(url, timeout=20)
+        except ImportError:
+            response = requests.get(url, headers=HEADERS, timeout=20)
+
         print(f"[DEBUG PUN] Status code HTTP: {response.status_code}")
         response.raise_for_status()
-        
+
         soup = BeautifulSoup(response.text, "html.parser")
         testo_pagina = soup.get_text(" ", strip=True)
 
@@ -45,7 +45,7 @@ def estrai_pun_segugio(url):
         if match_fallback:
             return match_fallback.group(1).replace(",", ".")
 
-        print("[DEBUG PUN] Pagina scaricata ma frase non trovata. Primi 300 caratteri:", testo_pagina[:300])
+        print("[DEBUG PUN] Frase non trovata. Primi 200 caratteri:", testo_pagina[:200])
         return "N/D"
     except Exception as e:
         print(f"[ERRORE PUN DETTAGLIO]: {e}")
